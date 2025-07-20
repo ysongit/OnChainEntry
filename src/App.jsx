@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import TicketPurchase from './components/TicketPurchase';
 import contractABI from './contractABI.json';
 import './App.css';
 
@@ -50,6 +51,11 @@ function App() {
         <p>Connected: {account.address}</p>
       ) : (
         <button onClick={connectWallet}>Connect Wallet</button>
+      )}
+      {contract && (
+        <>
+          <TicketPurchase contract={contract} signer={signer} />
+        </>
       )}
     </div>
   );
