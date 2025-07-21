@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import EventList from './components/EventList';
 import TicketPurchase from './components/TicketPurchase';
 import contractABI from './contractABI.json';
 import './App.css';
@@ -54,6 +55,7 @@ function App() {
       )}
       {contract && (
         <>
+          <EventList contract={contract} />
           <TicketPurchase contract={contract} signer={signer} />
         </>
       )}
