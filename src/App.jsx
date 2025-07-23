@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import EventList from './components/EventList';
 import TicketPurchase from './components/TicketPurchase';
 import TicketTransfer from './components/TicketTransfer';
+import MyTickets from './components/MyTickets';
 import contractABI from './contractABI.json';
 import './App.css';
 
@@ -59,6 +60,7 @@ function App() {
           <EventList contract={contract} />
           <TicketPurchase contract={contract} signer={signer} />
           <TicketTransfer contract={contract} />
+          <MyTickets contract={contract} account={account} />
         </>
       )}
     </div>
