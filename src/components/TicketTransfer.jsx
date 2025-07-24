@@ -1,37 +1,46 @@
 import React, { useState } from 'react';
-import { ethers } from 'ethers';
 
-function TicketPurchase({ contract, signer }) {
+function TicketTransfer({ contract }) {
   const [eventId, setEventId] = useState('');
+  const [ticketId, setTicketId] = useState('');
+  const [toAddress, setToAddress] = useState('');
   const [status, setStatus] = useState('');
 
-  const buyTicket = async () => {
+  const transferTicket = async () => {
     try {
-      const event = await contract.getEventDetails(eventId);
-      const ticketPrice = event[1];
-      const tx = await contract.buyTicket(eventId, {
-        value: ticketPrice,
-      });
+      const tx = await contract.transferTicket(eventId, ticketId, toAddress);
       await tx.wait();
-      setStatus('Ticket purchased successfully!');
+      setStatus('Ticket transferred successfully!');
     } catch (error) {
       setStatus(`Error: ${error.message}`);
     }
   };
 
   return (
-    <div className="ticket-purchase">
-      <h2>Buy Ticket</h2>
+    <div className="ticket-transfer">
+      <h2>Transfer Ticket</h2>
       <input
         type="number"
         placeholder="Event ID"
         value={eventId}
         onChange={(e) => setEventId(e.target.value)}
       />
-      <button onClick={buyTicket}>Buy Ticket</button>
+      <input
+        type="number"
+        placeholder="Ticket ID"
+        value={ticketId}
+        onChange={(e) => setTicketId(e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="Recipient Address"
+        value={toAddress}
+        onChange={(e) => setToAddress(e.target.value)}
+      />
+      <button onClick={transferTicket}>Transfer Ticket</button>
       <p>{status}</p>
     </div>
   );
 }
 
-export default TicketPurchase;
+export default TicketTransfer;
