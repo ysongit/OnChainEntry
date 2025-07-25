@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import CreateEvent from './components/CreateEvent';
 import EventList from './components/EventList';
 import TicketPurchase from './components/TicketPurchase';
 import TicketTransfer from './components/TicketTransfer';
@@ -14,6 +15,7 @@ function App() {
   const [signer, setSigner] = useState(null);
   const [contract, setContract] = useState(null);
   const [account, setAccount] = useState(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -57,6 +59,7 @@ function App() {
       )}
       {contract && (
         <>
+          <CreateEvent contract={contract} signer={signer} />
           <EventList contract={contract} />
           <TicketPurchase contract={contract} signer={signer} />
           <TicketTransfer contract={contract} />

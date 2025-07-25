@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
 
 function EventList({ contract }) {
   const [events, setEvents] = useState([]);
