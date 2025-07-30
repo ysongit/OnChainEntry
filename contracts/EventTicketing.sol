@@ -45,7 +45,7 @@ contract EventTicketing is Ownable, ReentrancyGuard {
         uint256 _ticketPrice,
         uint256 _totalTickets,
         uint256 _eventDate
-    ) external onlyOwner {
+    ) external {
         require(_totalTickets > 0, "Must have at least one ticket");
         require(_eventDate > block.timestamp, "Event date must be in the future");
 
