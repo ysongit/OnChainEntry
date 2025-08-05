@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import CreateEvent from './components/CreateEvent';
 import EventList from './components/EventList';
 import TicketPurchase from './components/TicketPurchase';
@@ -57,15 +58,20 @@ function App() {
       ) : (
         <button onClick={connectWallet}>Connect Wallet</button>
       )}
-      {contract && (
-        <>
-          <CreateEvent contract={contract} signer={signer} />
-          <EventList contract={contract} />
-          <TicketPurchase contract={contract} signer={signer} />
-          <TicketTransfer contract={contract} />
-          <MyTickets contract={contract} account={account} />
-        </>
-      )}
+     <main className="main-content">
+        {contract ? (
+          <Routes>
+            <Route path="/events" element={<EventList contract={contract} />} />
+            <Route path="/purchase" element={<TicketPurchase contract={contract} signer={signer} />} />
+            <Route path="/transfer" element={<TicketTransfer contract={contract} />} />
+            <Route path="/my-tickets" element={<MyTickets contract={contract} account={account} />} />
+            {isOwner && <Route path="/create-event" element={<CreateEvent contract={contract} signer={signer} />} />}
+            <Route path="/" element={<EventList contract={contract} />} /> {/* Default route */}
+          </Routes>
+        ) : (
+          <p className="loading">Please connect your wallet to continue.</p>
+        )}
+      </main>
     </div>
   );
 }
