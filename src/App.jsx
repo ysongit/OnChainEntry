@@ -52,12 +52,23 @@ function App() {
 
   return (
     <div className="app">
-      <h1>Event Ticketing DApp</h1>
-      {account ? (
-        <p>Connected: {account.address}</p>
-      ) : (
-        <button onClick={connectWallet}>Connect Wallet</button>
-      )}
+      <nav className="navbar">
+        <h1 className="navbar-brand">Event Ticketing</h1>
+        <div className="navbar-links">
+          <Link to="/events" className="nav-link">Events</Link>
+          <Link to="/purchase" className="nav-link">Buy Ticket</Link>
+          <Link to="/transfer" className="nav-link">Transfer Ticket</Link>
+          <Link to="/my-tickets" className="nav-link">My Tickets</Link>
+          {isOwner && <Link to="/create-event" className="nav-link">Create Event</Link>}
+          {account ? (
+            <span className="nav-account">
+              {account.address.slice(0, 6)}...{account.address.slice(-4)}
+            </span>
+          ) : (
+            <button onClick={connectWallet} className="nav-connect">Connect Wallet</button>
+          )}
+        </div>
+      </nav>
      <main className="main-content">
         {contract ? (
           <Routes>
