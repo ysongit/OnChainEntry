@@ -1,20 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract EventTicketing is Ownable, ReentrancyGuard {
-    // Struct to represent a ticket
-    struct Ticket {
-        uint256 eventId;
-        uint256 ticketId;
-        address owner;
-        bool isUsed;
-        bool isValid;
-    }
-
-    // Struct to represent an event
+contract EventTicketing is Ownable {
     struct Event {
         string name;
         uint256 ticketPrice;
@@ -22,136 +11,175 @@ contract EventTicketing is Ownable, ReentrancyGuard {
         uint256 ticketsSold;
         bool isActive;
         uint256 eventDate;
+        mapping(address => uint256[]) tickets; // Tickets owned by each address
     }
 
-    // State variables
-    mapping(uint256 => Event) public events;
-    mapping(uint256 => mapping(uint256 => Ticket)) public tickets; // eventId => ticketId => Ticket
-    uint256 public eventCount;
+    struct PredictionMarket {
+        uint256 eventId;
+        uint256 attendanceThreshold;
+        uint256 totalYesShares;
+        uint256 totalNoShares;
+        mapping(address => uint256) yesShares;
+        mapping(address => uint256) noShares;
+        bool isSettled;
+        bool outcome; // True if attendance >= threshold, False otherwise
+        uint256 actualAttendance;
+        uint256 totalPool; // Total ETH in the market
+    }
 
-    // Events for logging
+    mapping(uint256 => Event) public events;
+    mapping(uint256 => PredictionMarket) public predictionMarkets;
+    uint256 public eventCount;
+    uint256 public marketCount;
+
     event EventCreated(uint256 eventId, string name, uint256 ticketPrice, uint256 totalTickets, uint256 eventDate);
     event TicketPurchased(uint256 eventId, uint256 ticketId, address buyer);
     event TicketTransferred(uint256 eventId, uint256 ticketId, address from, address to);
-    event TicketUsed(uint256 eventId, uint256 ticketId, address owner);
-    event EventCancelled(uint256 eventId);
+    event PredictionMarketCreated(uint256 marketId, uint256 eventId, uint256 attendanceThreshold);
+    event SharesPurchased(uint256 marketId, address buyer, bool isYes, uint256 shares, uint256 cost);
+    event MarketSettled(uint256 marketId, bool outcome, uint256 actualAttendance);
 
-    // Constructor to set the contract deployer as the owner
     constructor() Ownable(msg.sender) {}
 
-    // Create a new event
-    function createEvent(
-        string memory _name,
-        uint256 _ticketPrice,
-        uint256 _totalTickets,
-        uint256 _eventDate
-    ) external {
-        require(_totalTickets > 0, "Must have at least one ticket");
+    function createEvent(string memory _name, uint256 _ticketPrice, uint256 _totalTickets, uint256 _eventDate) public onlyOwner {
         require(_eventDate > block.timestamp, "Event date must be in the future");
-
         eventCount++;
-        events[eventCount] = Event({
-            name: _name,
-            ticketPrice: _ticketPrice,
-            totalTickets: _totalTickets,
-            ticketsSold: 0,
-            isActive: true,
-            eventDate: _eventDate
-        });
-
+        Event storage newEvent = events[eventCount];
+        newEvent.name = _name;
+        newEvent.ticketPrice = _ticketPrice;
+        newEvent.totalTickets = _totalTickets;
+        newEvent.ticketsSold = 0;
+        newEvent.isActive = true;
+        newEvent.eventDate = _eventDate;
         emit EventCreated(eventCount, _name, _ticketPrice, _totalTickets, _eventDate);
     }
 
-    // Purchase a ticket
-    function buyTicket(uint256 _eventId) external payable nonReentrant {
-        Event storage eventData = events[_eventId];
-        require(eventData.isActive, "Event is not active");
-        require(block.timestamp < eventData.eventDate, "Event has already occurred");
-        require(eventData.ticketsSold < eventData.totalTickets, "No tickets available");
-        require(msg.value >= eventData.ticketPrice, "Insufficient payment");
-
-        eventData.ticketsSold++;
-        uint256 ticketId = eventData.ticketsSold;
-        tickets[_eventId][ticketId] = Ticket({
-            eventId: _eventId,
-            ticketId: ticketId,
-            owner: msg.sender,
-            isUsed: false,
-            isValid: true
-        });
-
-        emit TicketPurchased(_eventId, ticketId, msg.sender);
-
-        // Refund excess payment
-        if (msg.value > eventData.ticketPrice) {
-            payable(msg.sender).transfer(msg.value - eventData.ticketPrice);
+    function buyTicket(uint256 _eventId) public payable {
+        require(_eventId > 0 && _eventId <= eventCount, "Invalid event ID");
+        Event storage evt = events[_eventId];
+        require(evt.isActive, "Event is not active");
+        require(evt.ticketsSold < evt.totalTickets, "No tickets available");
+        require(msg.value >= evt.ticketPrice, "Insufficient payment");
+        evt.ticketsSold++;
+        evt.tickets[msg.sender].push(evt.ticketsSold);
+        emit TicketPurchased(_eventId, evt.ticketsSold, msg.sender);
+        if (msg.value > evt.ticketPrice) {
+            payable(msg.sender).transfer(msg.value - evt.ticketPrice);
         }
     }
 
-    // Transfer a ticket to another address
-    function transferTicket(uint256 _eventId, uint256 _ticketId, address _to) external {
-        Ticket storage ticket = tickets[_eventId][_ticketId];
-        require(ticket.owner == msg.sender, "Only ticket owner can transfer");
-        require(ticket.isValid, "Ticket is invalid or used");
-        require(events[_eventId].isActive, "Event is not active");
-        require(_to != address(0), "Invalid recipient");
-
-        ticket.owner = _to;
+    function transferTicket(uint256 _eventId, uint256 _ticketId, address _to) public {
+        require(_eventId > 0 && _eventId <= eventCount, "Invalid event ID");
+        Event storage evt = events[_eventId];
+        require(evt.isActive, "Event is not active");
+        require(_ticketId > 0 && _ticketId <= evt.ticketsSold, "Invalid ticket ID");
+        uint256[] storage senderTickets = evt.tickets[msg.sender];
+        bool found = false;
+        for (uint256 i = 0; i < senderTickets.length; i++) {
+            if (senderTickets[i] == _ticketId) {
+                senderTickets[i] = senderTickets[senderTickets.length - 1];
+                senderTickets.pop();
+                evt.tickets[_to].push(_ticketId);
+                found = true;
+                break;
+            }
+        }
+        require(found, "Ticket not owned by sender");
         emit TicketTransferred(_eventId, _ticketId, msg.sender, _to);
     }
 
-    // Mark a ticket as used (e.g., at event entry)
-    function useTicket(uint256 _eventId, uint256 _ticketId) external onlyOwner {
-        Ticket storage ticket = tickets[_eventId][_ticketId];
-        require(ticket.isValid, "Ticket is invalid");
-        require(!ticket.isUsed, "Ticket already used");
-        require(events[_eventId].isActive, "Event is not active");
-
-        ticket.isUsed = true;
-        ticket.isValid = false;
-        emit TicketUsed(_eventId, _ticketId, ticket.owner);
+    function getEventDetails(uint256 _eventId) public view returns (string memory, uint256, uint256, uint256, bool, uint256) {
+        require(_eventId > 0 && _eventId <= eventCount, "Invalid event ID");
+        Event storage evt = events[_eventId];
+        return (evt.name, evt.ticketPrice, evt.totalTickets, evt.ticketsSold, evt.isActive, evt.eventDate);
     }
 
-    // Cancel an event
-    function cancelEvent(uint256 _eventId) external onlyOwner {
-        Event storage eventData = events[_eventId];
-        require(eventData.isActive, "Event is already cancelled or inactive");
-
-        eventData.isActive = false;
-        emit EventCancelled(_eventId);
+    function getTicketDetails(uint256 _eventId, uint256 _ticketId) public view returns (address, bool, bool) {
+        require(_eventId > 0 && _eventId <= eventCount, "Invalid event ID");
+        Event storage evt = events[_eventId];
+        require(_ticketId > 0 && _ticketId <= evt.ticketsSold, "Invalid ticket ID");
+        address owner;
+        for (uint256 i = 1; i <= eventCount; i++) {
+            for (uint256 j = 0; j < evt.tickets[msg.sender].length; j++) {
+                if (evt.tickets[msg.sender][j] == _ticketId) {
+                    owner = msg.sender;
+                    break;
+                }
+            }
+        }
+        return (owner, false, true); // Simplified; assumes tickets are valid and unused
     }
 
-    // Withdraw funds from ticket sales
-    function withdrawFunds() external onlyOwner {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No funds to withdraw");
-        payable(owner()).transfer(balance);
+    function createPredictionMarket(uint256 _eventId, uint256 _attendanceThreshold) public onlyOwner {
+        require(_eventId > 0 && _eventId <= eventCount, "Invalid event ID");
+        require(_attendanceThreshold > 0, "Attendance threshold must be positive");
+        marketCount++;
+        PredictionMarket storage market = predictionMarkets[marketCount];
+        market.eventId = _eventId;
+        market.attendanceThreshold = _attendanceThreshold;
+        market.isSettled = false;
+        emit PredictionMarketCreated(marketCount, _eventId, _attendanceThreshold);
     }
 
-    // Get ticket details
-    function getTicketDetails(uint256 _eventId, uint256 _ticketId)
-        external
-        view
-        returns (address owner, bool isUsed, bool isValid)
-    {
-        Ticket storage ticket = tickets[_eventId][_ticketId];
-        return (ticket.owner, ticket.isUsed, ticket.isValid);
+    function buyShares(uint256 _marketId, bool _isYes, uint256 _shares) public payable {
+        require(_marketId > 0 && _marketId <= marketCount, "Invalid market ID");
+        PredictionMarket storage market = predictionMarkets[_marketId];
+        require(!market.isSettled, "Market is settled");
+        require(events[market.eventId].isActive, "Event is not active");
+        require(_shares > 0, "Must buy at least one share");
+        uint256 cost = _shares * 0.5 ether; // Fixed price of 0.5 ETH per share for simplicity
+        require(msg.value >= cost, "Insufficient payment");
+
+        if (_isYes) {
+            market.yesShares[msg.sender] += _shares;
+            market.totalYesShares += _shares;
+        } else {
+            market.noShares[msg.sender] += _shares;
+            market.totalNoShares += _shares;
+        }
+        market.totalPool += cost;
+        emit SharesPurchased(_marketId, msg.sender, _isYes, _shares, cost);
+
+        if (msg.value > cost) {
+            payable(msg.sender).transfer(msg.value - cost);
+        }
     }
 
-    // Get event details
-    function getEventDetails(uint256 _eventId)
-        external
-        view
-        returns (string memory name, uint256 ticketPrice, uint256 totalTickets, uint256 ticketsSold, bool isActive, uint256 eventDate)
-    {
-        Event storage eventData = events[_eventId];
-        return (
-            eventData.name,
-            eventData.ticketPrice,
-            eventData.totalTickets,
-            eventData.ticketsSold,
-            eventData.isActive,
-            eventData.eventDate
-        );
+    function settleMarket(uint256 _marketId, uint256 _actualAttendance) public onlyOwner {
+        require(_marketId > 0 && _marketId <= marketCount, "Invalid market ID");
+        PredictionMarket storage market = predictionMarkets[_marketId];
+        require(!market.isSettled, "Market already settled");
+        require(events[market.eventId].eventDate < block.timestamp, "Event not yet occurred");
+
+        market.actualAttendance = _actualAttendance;
+        market.outcome = _actualAttendance >= market.attendanceThreshold;
+        market.isSettled = true;
+
+        uint256 totalShares = market.totalYesShares + market.totalNoShares;
+        if (totalShares == 0) return; // No shares bought, no payouts
+
+        uint256 payoutPerShare = market.totalPool / (market.outcome ? market.totalYesShares : market.totalNoShares);
+        // Payouts are handled via claimShares function to avoid gas limit issues
+        emit MarketSettled(_marketId, market.outcome, _actualAttendance);
+    }
+
+    function claimShares(uint256 _marketId) public {
+        require(_marketId > 0 && _marketId <= marketCount, "Invalid market ID");
+        PredictionMarket storage market = predictionMarkets[_marketId];
+        require(market.isSettled, "Market not settled");
+
+        uint256 shares = market.outcome ? market.yesShares[msg.sender] : market.noShares[msg.sender];
+        require(shares > 0, "No shares to claim");
+
+        uint256 payoutPerShare = market.totalPool / (market.outcome ? market.totalYesShares : market.totalNoShares);
+        uint256 payout = shares * payoutPerShare;
+
+        if (market.outcome) {
+            market.yesShares[msg.sender] = 0;
+        } else {
+            market.noShares[msg.sender] = 0;
+        }
+
+        payable(msg.sender).transfer(payout);
     }
 }
