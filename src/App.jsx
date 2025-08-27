@@ -6,6 +6,8 @@ import EventList from './components/EventList';
 import TicketPurchase from './components/TicketPurchase';
 import TicketTransfer from './components/TicketTransfer';
 import MyTickets from './components/MyTickets';
+import PredictionMarket from './components/PredictionMarket';
+
 import contractABI from './contractABI.json';
 import './App.css';
 
@@ -60,6 +62,7 @@ function App() {
           <Link to="/transfer" className="nav-link">Transfer Ticket</Link>
           <Link to="/my-tickets" className="nav-link">My Tickets</Link>
           {isOwner && <Link to="/create-event" className="nav-link">Create Event</Link>}
+          <Link to="/prediction-market" className="nav-link">Prediction Market</Link>
           {account ? (
             <span className="nav-account">
               {account.address.slice(0, 6)}...{account.address.slice(-4)}
@@ -77,6 +80,7 @@ function App() {
             <Route path="/transfer" element={<TicketTransfer contract={contract} />} />
             <Route path="/my-tickets" element={<MyTickets contract={contract} account={account} />} />
             {isOwner && <Route path="/create-event" element={<CreateEvent contract={contract} signer={signer} />} />}
+            <Route path="/prediction-market" element={<PredictionMarket contract={contract} signer={signer} isOwner={isOwner} />} />
             <Route path="/" element={<EventList contract={contract} />} /> {/* Default route */}
           </Routes>
         ) : (

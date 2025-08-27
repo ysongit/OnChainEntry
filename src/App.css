@@ -1,38 +1,143 @@
 /* General app container */
 .app {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
   font-family: 'Arial', sans-serif;
   background-color: #f8f9fa;
   min-height: 100vh;
 }
 
-/* Headings */
-h1 {
-  text-align: center;
-  color: #1a1a1a;
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+/* Navbar */
+.navbar {
+  background-color: #2c3e50;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
-h2 {
+.navbar-brand {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: #007bff;
+}
+
+.nav-account {
+  color: #dfe6e9;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.nav-connect {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.nav-connect:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.nav-connect:active {
+  transform: translateY(0);
+}
+
+/* Main content */
+.main-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Component containers */
+.create-event,
+.event-list,
+.ticket-purchase,
+.ticket-transfer,
+.my-tickets,
+.prediction-market {
+  background-color: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  transition: box-shadow 0.3s ease;
+}
+
+.create-event:hover,
+.event-list:hover,
+.ticket-purchase:hover,
+.ticket-transfer:hover,
+.my-tickets:hover,
+.prediction-market:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Headings */
+h2, h3 {
   color: #2c3e50;
   font-size: 1.8rem;
   margin-bottom: 1rem;
   font-weight: 600;
 }
 
-/* Connected account display */
-.app p {
-  text-align: center;
-  color: #34495e;
+h3 {
+  font-size: 1.4rem;
+}
+
+/* Form group */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Inputs and select */
+input[type="text"],
+input[type="number"],
+input[type="datetime-local"],
+select {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
   font-size: 1rem;
-  margin-bottom: 2rem;
-  font-style: italic;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
 
 /* Buttons */
@@ -57,61 +162,23 @@ button:active {
   transform: translateY(0);
 }
 
-/* Input fields */
-input[type="text"],
-input[type="number"],
-input[type="datetime-local"] {
-  width: 100%;
-  max-width: 300px;
-  padding: 10px;
-  margin: 10px 0;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
 }
 
-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
-}
-
-/* Component containers */
-.create-event,
-.event-list,
-.ticket-purchase,
-.ticket-transfer,
-.my-tickets {
-  margin: 20px 0;
-  padding: 20px;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease;
-}
-
-.create-event:hover,
-.event-list:hover,
-.ticket-purchase:hover,
-.ticket-transfer:hover,
-.my-tickets:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
-
-/* Create Event */
-.create-event input {
-  display: block;
-  margin-bottom: 15px;
-}
-
-.create-event p {
+/* Status messages */
+.success {
   color: #28a745;
   font-weight: 500;
+  margin-top: 10px;
 }
 
-.create-event p.error {
+.error {
   color: #dc3545;
+  font-weight: 500;
+  margin-top: 10px;
 }
 
 /* Event List */
@@ -135,31 +202,11 @@ input:focus {
   font-size: 0.95rem;
 }
 
-/* Ticket Purchase */
-.ticket-purchase input {
-  max-width: 200px;
-}
-
-.ticket-purchase p {
+.event-list p.status-active {
   color: #28a745;
-  font-weight: 500;
 }
 
-.ticket-purchase p.error {
-  color: #dc3545;
-}
-
-/* Ticket Transfer */
-.ticket-transfer input {
-  max-width: 300px;
-}
-
-.ticket-transfer p {
-  color: #28a745;
-  font-weight: 500;
-}
-
-.ticket-transfer p.error {
+.event-list p.status-inactive {
   color: #dc3545;
 }
 
@@ -187,38 +234,59 @@ input:focus {
 .my-tickets p.no-tickets {
   color: #6c757d;
   font-style: italic;
+  text-align: center;
+}
+
+/* Prediction Market */
+.prediction-market .market-list > div {
+  padding: 15px;
+  margin-bottom: 15px;
+  background-color: #f1f3f5;
+  border-radius: 8px;
+  border-left: 4px solid #ffc107;
+}
+
+.prediction-market p {
+  margin: 5px 0;
+  color: #495057;
+  font-size: 0.95rem;
+}
+
+.prediction-market p.no-markets {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Loading message */
+.loading {
+  text-align: center;
+  color: #6c757d;
+  font-size: 1.2rem;
+  margin-top: 2rem;
 }
 
 /* Responsive design */
-@media (max-width: 600px) {
-  .app {
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .navbar-links {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .main-content {
     padding: 10px;
-  }
-
-  h1 {
-    font-size: 2rem;
-  }
-
-  h2 {
-    font-size: 1.5rem;
-  }
-
-  button {
-    padding: 10px 16px;
-    font-size: 0.9rem;
   }
 
   input[type="text"],
   input[type="number"],
-  input[type="datetime-local"] {
+  input[type="datetime-local"],
+  select {
     max-width: 100%;
-  }
-
-  .create-event,
-  .event-list,
-  .ticket-purchase,
-  .ticket-transfer,
-  .my-tickets {
-    padding: 15px;
   }
 }
