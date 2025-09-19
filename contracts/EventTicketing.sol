@@ -32,12 +32,18 @@ contract EventTicketing is Ownable {
     uint256 public eventCount;
     uint256 public marketCount;
 
+    // Liquidity check thresholds
+    uint256 public constant MINIMUM_SHARES = 10; // Minimum total shares for a liquid market
+    uint256 public constant MINIMUM_POOL = 1 ether; // Minimum pool size in ETH
+    uint256 public constant MAXIMUM_IMBALANCE_RATIO = 80; // Max % of shares on one side (80%)
+
     event EventCreated(uint256 eventId, string name, uint256 ticketPrice, uint256 totalTickets, uint256 eventDate);
     event TicketPurchased(uint256 eventId, uint256 ticketId, address buyer);
     event TicketTransferred(uint256 eventId, uint256 ticketId, address from, address to);
     event PredictionMarketCreated(uint256 marketId, uint256 eventId, uint256 attendanceThreshold);
     event SharesPurchased(uint256 marketId, address buyer, bool isYes, uint256 shares, uint256 cost);
     event MarketSettled(uint256 marketId, bool outcome, uint256 actualAttendance);
+    event LowLiquidityWarning(uint256 marketId, string reason);
 
     constructor() Ownable(msg.sender) {}
 
@@ -127,8 +133,26 @@ contract EventTicketing is Ownable {
         require(!market.isSettled, "Market is settled");
         require(events[market.eventId].isActive, "Event is not active");
         require(_shares > 0, "Must buy at least one share");
-        uint256 cost = _shares * 0.5 ether; // Fixed price of 0.5 ETH per share for simplicity
+        uint256 cost = _shares * 0.5 ether; // Fixed price of 0.5 ETH per share
         require(msg.value >= cost, "Insufficient payment");
+
+        // Liquidity checks
+        uint256 totalShares = market.totalYesShares + market.totalNoShares;
+        if (totalShares < MINIMUM_SHARES) {
+            emit LowLiquidityWarning(_marketId, "Low total shares in market");
+        }
+        if (market.totalPool < MINIMUM_POOL) {
+            emit LowLiquidityWarning(_marketId, "Low pool size");
+        }
+        if (totalShares > 0) {
+            uint256 yesRatio = (market.totalYesShares * 100) / totalShares;
+            uint256 noRatio = (market.totalNoShares * 100) / totalShares;
+            if (yesRatio > MAXIMUM_IMBALANCE_RATIO) {
+                emit LowLiquidityWarning(_marketId, "Market heavily skewed toward Yes");
+            } else if (noRatio > MAXIMUM_IMBALANCE_RATIO) {
+                emit LowLiquidityWarning(_marketId, "Market heavily skewed toward No");
+            }
+        }
 
         if (_isYes) {
             market.yesShares[msg.sender] += _shares;
@@ -158,8 +182,6 @@ contract EventTicketing is Ownable {
         uint256 totalShares = market.totalYesShares + market.totalNoShares;
         if (totalShares == 0) return; // No shares bought, no payouts
 
-        uint256 payoutPerShare = market.totalPool / (market.outcome ? market.totalYesShares : market.totalNoShares);
-        // Payouts are handled via claimShares function to avoid gas limit issues
         emit MarketSettled(_marketId, market.outcome, _actualAttendance);
     }
 
